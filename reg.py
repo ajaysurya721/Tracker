@@ -12,90 +12,112 @@ st.set_page_config(page_title="Student GPA Predictor", layout="centered")
 st.title("🎓 Student GPA Predictor")
 
 # --------------------------------------------------
-# 1. Load data
+# 1. Upload CSV file
 # --------------------------------------------------
-df = pd.read_csv("student_details.csv")
-
-st.subheader("Dataset Preview")
-st.dataframe(df.head())
-
-# --------------------------------------------------
-# 2. Prepare data
-# --------------------------------------------------
-X = df.drop("GPA", axis=1)
-y = df["GPA"]
-
-X_encoded = pd.get_dummies(X, drop_first=True)
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X_encoded, y, test_size=0.3, random_state=42
+uploaded_file = st.file_uploader(
+    "📂 Upload Student Details CSV file",
+    type=["csv"]
 )
 
-scaler = StandardScaler()
-X_train_ss = scaler.fit_transform(X_train)
-X_test_ss = scaler.transform(X_test)
+if uploaded_file is not None:
 
-# --------------------------------------------------
-# 3. Train model
-# --------------------------------------------------
-model = LinearRegression()
-model.fit(X_train_ss, y_train)
+    df = pd.read_csv(uploaded_file)
 
-# --------------------------------------------------
-# 4. Model evaluation
-# --------------------------------------------------
-y_pred = model.predict(X_test_ss)
+    st.subheader("Dataset Preview")
+    st.dataframe(df.head())
 
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+    # --------------------------------------------------
+    # 2. Prepare data
+    # --------------------------------------------------
+    if "GPA" not in df.columns:
+        st.error("CSV file must contain a 'GPA' column")
+        st.stop()
 
-st.subheader("📊 Model Performance")
-st.write(f"**Mean Squared Error:** {mse:.4f}")
-st.write(f"**R² Score:** {r2:.4f}")
+    X = df.drop("GPA", axis=1)
+    y = df["GPA"]
 
-# --------------------------------------------------
-# 5. Sidebar: User input
-# --------------------------------------------------
-st.sidebar.header("Enter Student Details")
+    X_encoded = pd.get_dummies(X, drop_first=True)
 
-age = st.sidebar.number_input("Age", min_value=15, max_value=60, value=20)
-credits = st.sidebar.number_input("Credits Completed", min_value=0, max_value=200, value=40)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_encoded, y, test_size=0.3, random_state=42
+    )
 
-# Example categorical feature
-gender = st.sidebar.selectbox("Gender", df["Gender"].unique())
+    scaler = StandardScaler()
+    X_train_ss = scaler.fit_transform(X_train)
+    X_test_ss = scaler.transform(X_test)
 
-# --------------------------------------------------
-# 6. Create input dataframe
-# --------------------------------------------------
-input_dict = {
-    "Age": age,
-    "Credits_Completed": credits,
-    "Gender": gender
-}
+    # --------------------------------------------------
+    # 3. Train model
+    # --------------------------------------------------
+    model = LinearRegression()
+    model.fit(X_train_ss, y_train)
 
-input_df = pd.DataFrame([input_dict])
+    # --------------------------------------------------
+    # 4. Model evaluation
+    # --------------------------------------------------
+    y_pred = model.predict(X_test_ss)
 
-# Encode input same as training data
-input_encoded = pd.get_dummies(input_df)
-input_encoded = input_encoded.reindex(columns=X_encoded.columns, fill_value=0)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)
 
-input_scaled = scaler.transform(input_encoded)
+    st.subheader("📊 Model Performance")
+    st.write(f"**Mean Squared Error:** {mse:.4f}")
+    st.write(f"**R² Score:** {r2:.4f}")
 
-# --------------------------------------------------
-# 7. Predict GPA
-# --------------------------------------------------
-if st.button("🎯 Predict GPA"):
-    prediction = model.predict(input_scaled)[0]
-    st.success(f"Predicted GPA: **{prediction:.2f}**")
+    # --------------------------------------------------
+    # 5. Sidebar: User input
+    # --------------------------------------------------
+    st.sidebar.header("Enter Student Details")
 
-# --------------------------------------------------
-# 8. Feature importance
-# --------------------------------------------------
-st.subheader("🔍 Feature Importance")
+    age = st.sidebar.number_input(
+        "Age", min_value=15, max_value=60, value=20
+    )
 
-coef_df = pd.DataFrame({
-    "Feature": X_encoded.columns,
-    "Coefficient": model.coef_
-}).sort_values("Coefficient", key=np.abs, ascending=False)
+    credits = st.sidebar.number_input(
+        "Credits Completed", min_value=0, max_value=200, value=40
+    )
 
-st.dataframe(coef_df)
+    gender = st.sidebar.selectbox(
+        "Gender", df["Gender"].unique()
+    )
+
+    # --------------------------------------------------
+    # 6. Create input dataframe
+    # --------------------------------------------------
+    input_dict = {
+        "Age": age,
+        "Credits_Completed": credits,
+        "Gender": gender
+    }
+
+    input_df = pd.DataFrame([input_dict])
+
+    input_encoded = pd.get_dummies(input_df)
+    input_encoded = input_encoded.reindex(
+        columns=X_encoded.columns,
+        fill_value=0
+    )
+
+    input_scaled = scaler.transform(input_encoded)
+
+    # --------------------------------------------------
+    # 7. Predict GPA
+    # --------------------------------------------------
+    if st.button("🎯 Predict GPA"):
+        prediction = model.predict(input_scaled)[0]
+        st.success(f"Predicted GPA: **{prediction:.2f}**")
+
+    # --------------------------------------------------
+    # 8. Feature importance
+    # --------------------------------------------------
+    st.subheader("🔍 Feature Importance")
+
+    coef_df = pd.DataFrame({
+        "Feature": X_encoded.columns,
+        "Coefficient": model.coef_
+    }).sort_values("Coefficient", key=np.abs, ascending=False)
+
+    st.dataframe(coef_df)
+
+else:
+    st.info("👆 Please upload a CSV file to continue")

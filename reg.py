@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -26,13 +27,13 @@ if uploaded_file is not None:
     st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
+    if "GPA" not in df.columns:
+        st.error("CSV file must contain 'GPA' column")
+        st.stop()
+
     # --------------------------------------------------
     # 2. Prepare data
     # --------------------------------------------------
-    if "GPA" not in df.columns:
-        st.error("CSV file must contain a 'GPA' column")
-        st.stop()
-
     X = df.drop("GPA", axis=1)
     y = df["GPA"]
 
@@ -63,6 +64,24 @@ if uploaded_file is not None:
     st.subheader("📊 Model Performance")
     st.write(f"**Mean Squared Error:** {mse:.4f}")
     st.write(f"**R² Score:** {r2:.4f}")
+
+    # --------------------------------------------------
+    # 📈 GRAPH 1: Actual vs Predicted GPA
+    # --------------------------------------------------
+    st.subheader("📈 Actual vs Predicted GPA")
+
+    fig1, ax1 = plt.subplots()
+    ax1.scatter(y_test, y_pred)
+    ax1.plot(
+        [y_test.min(), y_test.max()],
+        [y_test.min(), y_test.max()]
+    )
+    ax1.set_xlabel("Actual GPA")
+    ax1.set_ylabel("Predicted GPA")
+    ax1.set_title("Actual vs Predicted GPA")
+    ax1.grid(True)
+
+    st.pyplot(fig1)
 
     # --------------------------------------------------
     # 5. Sidebar: User input
@@ -108,15 +127,24 @@ if uploaded_file is not None:
         st.success(f"Predicted GPA: **{prediction:.2f}**")
 
     # --------------------------------------------------
-    # 8. Feature importance
+    # 📊 GRAPH 2: Feature Importance
     # --------------------------------------------------
-    st.subheader("🔍 Feature Importance")
+    st.subheader("📊 Feature Importance")
 
     coef_df = pd.DataFrame({
         "Feature": X_encoded.columns,
         "Coefficient": model.coef_
     }).sort_values("Coefficient", key=np.abs, ascending=False)
 
+    fig2, ax2 = plt.subplots()
+    ax2.barh(coef_df["Feature"][:10], coef_df["Coefficient"][:10])
+    ax2.set_xlabel("Coefficient Value")
+    ax2.set_title("Top 10 Important Features")
+    ax2.invert_yaxis()
+
+    st.pyplot(fig2)
+
+    st.subheader("📋 Feature Coefficients Table")
     st.dataframe(coef_df)
 
 else:
